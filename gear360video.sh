@@ -35,7 +35,7 @@ TMPAUDIO="tmpaudio.aac"
 TMPVIDEO="tmpvideo.mp4"
 # Throttle parallel processing to give some room for other processes
 # See: https://www.gnu.org/software/parallel/parallel_tutorial.html#Limiting-the-resources
-PARALLELEXTRAOPTS="--load 99% --noswap --memfree 500M"
+PARALLELEXTRAOPTS="--load 99% --noswap"
 # Debug, yes = print debug messages
 DEBUG="no"
 # Global flag if temporary directories should be removed
@@ -80,21 +80,22 @@ run_command() {
   for i in "${!cmd[@]}"; do
     [ -n "${cmd[$i]}" ] || unset "cmd[$i]"
   done
+  if test "$ISMAC" = true && test "$1" = "notify-send"; then
+  	shift
+  	`/usr/bin/osascript -e "display notification \"$*\" with title \"$0\""`
+  elif test "$1" = "notify-send"; then
+    shift
+  	  notify-send -a $0 "${cmd[@]}"
+  else
+    print_debug "Running command: " "${cmd[@]}"
 
-  print_debug "Running command: " "${cmd[@]}"
-  "${cmd[@]}"
-  local status=$?
-  if [ $status -ne 0 ]; then
-    # We failed, inform the user and clean-up
-    echo "Error while running $1" >&2
-    if [ $1 != "notify-send" ]; then
-       # Display error in a nice graphical popup if available
-       run_command notify-send -a $0 "Error while running $1"
+    if ! "${cmd[@]}"; then
+      # We failed, inform the user and clean-up
+      run_command notify-send "Error while running $1" >&2
+      clean_up
+      exit 1
     fi
-    clean_up
-    exit 1
   fi
-  return $status
 }
 
 # Print help for the user
@@ -113,6 +114,8 @@ print_help() {
   echo "-s|--speed      optimise for speed (lower quality)"
   echo "-t|--temp DIR   set temporary directory (default: system's"
   echo "                temporary directory)"
+  echo "--mac           enable mac osx support, assuming you already"
+  echo "                installed gnu findutils and coreutils through brew."
   echo "-h|--help       prints this help"
 }
 
@@ -142,7 +145,7 @@ check_preconditions() {
 # Check required argument(s)
 if [ -z "${1+x}" ]; then
   print_help
-  run_command notify-send -a $0 "Please provide an input file."
+  run_command notify-send "Please provide an input file."
   exit 1
 fi
 
@@ -184,7 +187,18 @@ case $key in
     ;;
   -s|--speed)
     FFMPEGQUALITYDEC=""
-    FFMPEGQUALITYENC="-c:v libx264 -preset ultrafast"
+    FFMPEGQUALITYENC="-c:v libx264 -preset fast"
+    shift
+    ;;
+  --mac)
+    alias find='gfind'
+    alias mktemp='gmktemp'
+    ISMAC=true
+    shift
+    ;;
+  --d|--debug)
+    DEBUG="yes"
+    CLEANUP="no"
     shift
     ;;
   *)
@@ -219,7 +233,7 @@ else
 fi
 
 # Extract frames from video
-run_command notify-send -a $0 "Starting panoramic video stitching..."
+run_command notify-send "Starting panoramic video stitching..."
 echo "Extracting frames from video (this might take a while)..."
 # Note: anything in quotes will be treated as one single option
 run_command "ffmpeg" "-y" "-i" "$1" $FFMPEGQUALITYDEC "$FRAMESTEMPDIR/$IMAGETMPLDEC"
@@ -254,7 +268,13 @@ if [ -z "${USEPARALLEL+x}" ]; then
   find $FRAMESTEMPDIR -type f -name '*.jpg' | xargs -Ipanofile bash -c "run_command \"$DIR/gear360pano.sh\" -r -m -o \"$OUTTEMPDIR\" \"panofile\" \"$PTOTMPL\""
 else
   # Use parallel
-  find $FRAMESTEMPDIR -type f -name '*.jpg' | parallel $PARALLELEXTRAOPTS --bar run_command "$DIR/gear360pano.sh" -r -m -o "$OUTTEMPDIR" {} "$PTOTMPL"
+  if test "$ISMAC" = true; then
+    # gnu parallel gives a segmentation fault as a normal user.. :(
+    echo "Running parallel under sudo!"
+  	find $FRAMESTEMPDIR -type f -name '*.jpg' | sudo parallel $PARALLELEXTRAOPTS --bar -- "$DIR/gear360pano.sh" -r -m -o "$OUTTEMPDIR" {} "$PTOTMPL"
+  else
+    find $FRAMESTEMPDIR -type f -name '*.jpg' | parallel $PARALLELEXTRAOPTS --bar -- "$DIR/gear360pano.sh" -r -m -o "$OUTTEMPDIR" {} "$PTOTMPL"
+  fi
 fi
 
 # Put stitched frames together
@@ -283,11 +303,11 @@ print_debug "Input video has audio: ${SRCHASAUDIO}"
 
 if [ -n "$SRCHASAUDIO" ]; then
   echo "Extracting audio..."
-  run_command notify-send -a $0 "Extracting audio from source video..."
+  run_command notify-send "Extracting audio from source video..."
   run_command ffmpeg -y -i "$1" -vn -acodec copy "$OUTTEMPDIR/$TMPAUDIO"
 
   echo "Merging audio..."
-  run_command notify-send -a $0 "Merging audio with final video..."
+  run_command notify-send "Merging audio with final video..."
   run_command ffmpeg -y -i "$OUTTEMPDIR/$TMPVIDEO" -i "$OUTTEMPDIR/$TMPAUDIO" -c:v copy -c:a aac -strict experimental "$OUTNAME"
 else
   print_debug "No audio detected (timelapse video?), continuing..."
@@ -301,5 +321,5 @@ clean_up
 ENDTS=`date +%s`
 RUNTIME=$((ENDTS-STARTTS))
 echo Video written to $OUTNAME, took: $RUNTIME s
-run_command notify-send -a $0 "'Conversion complete. Video written to $OUTNAME, took: $RUNTIME s'"
+run_command notify-send "'Conversion complete. Video written to $OUTNAME, took: $RUNTIME s'"
 exit 0

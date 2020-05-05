@@ -308,6 +308,13 @@ do
     print_debug "PTO file: $PTOTMPL"
   fi
 
+  echo "Extracting Roll and Pitch angles"
+	ROLL_ANGLE=$(exiftool $panofile | grep Roll | sed -e 's/.*://' | xargs)
+	PITCH_ANGLE=$(exiftool $panofile | grep Pitch | sed -e 's/.*://' | xargs)
+
+ 	echo "Generating modified pto file"
+	pano_modify --rotate=0,$PITCH_ANGLE,$ROLL_ANGLE --output mod_pto.pto $PTOTMPL
+
   echo "Processing panofile: $panofile"
   process_panorama $panofile $OUTNAMEFULL $PTOTMPL
 

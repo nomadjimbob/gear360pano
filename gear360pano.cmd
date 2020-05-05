@@ -172,6 +172,19 @@ for %%f in (%PROTOINNAME%) do (
       set LOCALPTOTMPL=!PTOTMPL!
     )
 
+      "%HUGINPATH%/exiftool.exe" -s3 -RollAngle !INNAME! > rollangle.tmp
+    set /p ROLLANGLE=<rollangle.tmp
+    del rollangle.tmp
+
+ 	    "%HUGINPATH%/exiftool.exe" -s3 -PitchAngle !INNAME! > pitchangle.tmp
+    set /p PITCHANGLE=<pitchangle.tmp
+    del pitchangle.tmp
+
+ 	    echo roll: !ROLLANGLE!
+	    echo pitch: !PITCHANGLE!
+
+ 	    "%HUGINPATH%/pano_modify.exe" --rotate=0,!PITCHANGLE!,!ROLLANGLE! --output mod_pto.pto !LOCALPTOTMPL!
+   
     echo Processing file: !INNAME!
     call :PROCESSPANORAMA "!INNAME!" "!OUTNAME!" "!LOCALPTOTMPL!"
 

@@ -9,6 +9,7 @@ generation 1 (SM-C200) and 2 (2017 or SM-R210).
 
 Latest Changes:
 
+- 2019-05-05: Merged various forks of the original together. Added support for filenames with spaces (@Dalton fork). Added Mac support (video @scholtalbers fork, pano @nomadjimbob). Added yaw/roll/pitch adjustments (@sashee fork)
 - 2018-06-14: fixed problem with EXIF data for generation 2 Gear360 that prevented Google
 from recognising stitched image as panorama.
 - 2018-06-04: added check for Hugin for video script.
@@ -50,7 +51,7 @@ Lots of changes so expect things not to work well (I did basic testing).
 
 Requirements:
 
-* Linux, Windows, should work on Mac.
+* Linux, Windows or Mac.
 * [Hugin](http://hugin.sourceforge.net/).
 * [ffmpeg](https://ffmpeg.org/download.html) (optional, needed for video stitching).
 * [multiblend](http://horman.net/multiblend/) (optional, needed for video stitching).
@@ -89,6 +90,38 @@ Finally: clone or download zip of this project then unpack it somewhere.
 One liner to install it in current directory under ```gear360pano``` (no ```.git``` dir):
 
     mkdir -p gear360pano && wget -qO- https://github.com/ultramango/gear360pano/archive/master.zip | bsdtar -xvf- -C gear360pano -s'|[^/]*/||' > /dev/null 2>&1 && find gear360pano -iname "*.sh" -exec chmod a+x {} \; && echo '\nDone'
+
+### Mac
+
+(only tested on video)
+
+ - The easiest is to use [Brew](https://brew.sh/) for installing most dependencies:
+  - `brew install exiftool coreutils findutils libpng jpeg-turbo libtiff ffmpeg`
+- [Hugin](http://hugin.sourceforge.net/):
+  - Download the DMG and install as usual
+  - Set your `$PATH` or set for each run:
+    ```bash
+    PATH=$PATH:/Applications/Hugin/Hugin.app/Contents/MacOS/:/Applications/Hugin/tools_mac/:/Applications/Hugin/PTBatcherGUI.app/Contents/MacOS/
+    ```
+- Download and unpack [Multiblend](http://horman.net/multiblend/):
+  - And build with
+    ```bash
+    g++ -I/opt/local/include -L/usr/local/opt/jpeg-turbo/lib -I/usr/local/opt/jpeg-turbo/include -L/usr/local/opt/libpng/lib -msse2 -O2 multiblend.cpp -ltiff -lturbojpeg -lpng -o multiblend
+    ```
+  - also add the location of `multiblend` to your `$PATH` or set on each run.
+
+
+ #### Troubleshooting
+
+ - Sudo required for **parallel**, on High Sierra gnu parallel gives a segmentation fault when it doesn't run under sudo(tell us if it doesn't for you).
+This means with `-p` we call `sudo parallel` for stitching frames. 
+- Try `brew reinstall libtiff` when you get the following error message
+```bash
+dyld: Library not loaded: /usr/local/opt/jpeg/lib/libjpeg.8.dylib
+Referenced from: /usr/local/opt/libtiff/lib/libtiff.5.dylib
+Reason: image not found
+```
+
 
 ### Windows
 
@@ -181,6 +214,7 @@ List of switches (Linux):
 * -s - optimise stitching for speed (quality will suffer)
 * -t directory - place temporary files in directory
 * -h - display help
+* --mac - enable mac osx support
 
 What is/might be wrong (loose notes about the script):
 

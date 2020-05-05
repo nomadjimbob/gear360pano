@@ -19,6 +19,7 @@ PTOTMPL_SM_C200="$DIR/gear360sm-c200.pto"
 PTOTMPL_SM_R210="$DIR/gear360sm-r210.pto"
 JPGQUALITY=97
 PTOJPGFILENAME="dummy.jpg"
+TOOLSPREFIX=""
 # Note, this file is inside GALLERYDIR
 GALLERYFILELIST="filelist.txt"
 # By default we will ignore files that have been processed
@@ -96,7 +97,7 @@ process_panorama() {
 
   # We need to use run_command with many parameters, or $1 doesn't get
   # quoted correctly and we cannot use filenames with spaces
-  run_command  "nona" \
+  run_command  "${TOOLSPREFIX}nona" \
                "$EXTRANONAOPTIONS" \
                "-o" "$TEMPDIR/$OUTTMPNAME" \
                "-m" "TIFF_m" \
@@ -180,6 +181,7 @@ print_help() {
   echo "-r|--remove  remove source file after processing (use with care)"
   echo "-t|--temp DIR set temporary directory (default: use system's"
   echo "             temporary directory)"
+  echo "--mac        Enabled Mac OSX support"
   echo "-h|--help    prints this help"
 }
 
@@ -250,6 +252,11 @@ case $key in
     shift
     shift
     ;;
+  --mac)
+    TOOLSPREFIX="/Applications/Hugin/tools_mac/"
+    BLENDPROG="${TOOLSPREFIX}${BLENDPROG}"
+    shift
+    ;;
   *)
     break
     ;;
@@ -264,7 +271,7 @@ fi
 
 # Check if we have the software to do it (Hugin, ImageMagick)
 # http://stackoverflow.com/questions/592620/check-if-a-program-exists-from-a-bash-script
-type nona >/dev/null 2>&1 || { echo >&2 "Hugin required but it is not installed. Aborting."; exit 1; }
+type ${TOOLSPREFIX}nona >/dev/null 2>&1 || { echo >&2 "Hugin required but it is not installed. Aborting."; exit 1; }
 
 STARTTS=`date +%s`
 

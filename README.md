@@ -93,8 +93,6 @@ One liner to install it in current directory under ```gear360pano``` (no ```.git
 
 ### Mac
 
-(only tested on video)
-
  - The easiest is to use [Brew](https://brew.sh/) for installing most dependencies:
   - `brew install exiftool coreutils findutils libpng jpeg-turbo libtiff ffmpeg`
 - [Hugin](http://hugin.sourceforge.net/):
